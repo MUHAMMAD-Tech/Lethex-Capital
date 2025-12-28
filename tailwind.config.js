@@ -64,8 +64,14 @@ export default {
                     blue: 'hsl(var(--education-blue))',
                     green: 'hsl(var(--education-green))'
                 },
-                success: 'hsl(var(--success))',
-                warning: 'hsl(var(--warning))',
+                success: {
+                    DEFAULT: 'hsl(var(--success))',
+                    foreground: 'hsl(var(--success-foreground))'
+                },
+                warning: {
+                    DEFAULT: 'hsl(var(--warning))',
+                    foreground: 'hsl(var(--warning-foreground))'
+                },
                 info: 'hsl(var(--info))',
                 sidebar: {
                     DEFAULT: 'hsl(var(--sidebar-background))',

@@ -1,0 +1,155 @@
+// LETHEX Holder Layout Component
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { motion } from 'motion/react';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { useAppStore } from '@/store/appStore';
+import { toast } from 'sonner';
+import {
+  Wallet,
+  ArrowRightLeft,
+  History,
+  Menu,
+  LogOut,
+  LayoutDashboard,
+} from 'lucide-react';
+import { useState } from 'react';
+
+const navigation = [
+  { name: 'Dashboard', href: '/holder/dashboard', icon: LayoutDashboard },
+  { name: 'Portfolio', href: '/holder/portfolio', icon: Wallet },
+  { name: 'Transactions', href: '/holder/transactions', icon: ArrowRightLeft },
+  { name: 'History', href: '/holder/history', icon: History },
+];
+
+export function HolderLayout() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { currentHolder, clearCurrentHolder } = useAppStore();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleExit = () => {
+    clearCurrentHolder();
+    toast.success('Session ended');
+    navigate('/login');
+  };
+
+  const NavLinks = () => (
+    <>
+      {navigation.map((item) => {
+        const isActive = location.pathname === item.href;
+        return (
+          <Link
+            key={item.name}
+            to={item.href}
+            onClick={() => setMobileMenuOpen(false)}
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+              isActive
+                ? 'bg-primary text-primary-foreground font-semibold'
+                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+            }`}
+          >
+            <item.icon className="h-5 w-5" />
+            <span>{item.name}</span>
+          </Link>
+        );
+      })}
+    </>
+  );
+
+  return (
+    <div className="flex min-h-screen w-full bg-background">
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:block w-64 border-r border-border bg-card shrink-0">
+        <div className="flex flex-col h-full">
+          {/* Logo */}
+          <div className="p-6 border-b border-border">
+            <h1 className="text-2xl font-bold gradient-text">LETHEX</h1>
+            <p className="text-xs text-muted-foreground mt-1">Fund Dashboard</p>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 p-4 space-y-2">
+            <NavLinks />
+          </nav>
+
+          {/* User Info & Exit */}
+          <div className="p-4 border-t border-border">
+            <div className="mb-3 px-4 py-2 bg-secondary/50 rounded-lg">
+              <p className="text-xs text-muted-foreground">Logged in as</p>
+              <p className="text-sm font-semibold text-foreground truncate">
+                {currentHolder?.name || 'Holder'}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={handleExit}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Exit
+            </Button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col">
+        {/* Mobile Header */}
+        <header className="lg:hidden flex items-center justify-between p-4 border-b border-border bg-card">
+          <h1 className="text-xl font-bold gradient-text">LETHEX</h1>
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Menu className="h-6 w-6" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-64 p-0">
+              <div className="flex flex-col h-full">
+                {/* Logo */}
+                <div className="p-6 border-b border-border">
+                  <h1 className="text-2xl font-bold gradient-text">LETHEX</h1>
+                  <p className="text-xs text-muted-foreground mt-1">Fund Dashboard</p>
+                </div>
+
+                {/* Navigation */}
+                <nav className="flex-1 p-4 space-y-2">
+                  <NavLinks />
+                </nav>
+
+                {/* User Info & Exit */}
+                <div className="p-4 border-t border-border">
+                  <div className="mb-3 px-4 py-2 bg-secondary/50 rounded-lg">
+                    <p className="text-xs text-muted-foreground">Logged in as</p>
+                    <p className="text-sm font-semibold text-foreground truncate">
+                      {currentHolder?.name || 'Holder'}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={handleExit}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Exit
+                  </Button>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </header>
+
+        {/* Page Content */}
+        <main className="flex-1 p-4 xl:p-8">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Outlet />
+          </motion.div>
+        </main>
+      </div>
+    </div>
+  );
+}

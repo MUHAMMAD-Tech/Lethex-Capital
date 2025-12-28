@@ -1,38 +1,58 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ThemeProvider } from 'next-themes';
 import IntersectObserver from '@/components/common/IntersectObserver';
-
+import { AuthProvider } from '@/contexts/AuthContext';
+import { RouteGuard } from '@/components/common/RouteGuard';
+import { Toaster } from 'sonner';
+import { useAppStore } from '@/store/appStore';
 import routes from './routes';
 
-// import { AuthProvider } from '@/contexts/AuthContext';
-// import { RouteGuard } from '@/components/common/RouteGuard';
-import { Toaster } from '@/components/ui/toaster';
-
 const App: React.FC = () => {
+  const { loadTokens, updatePrices } = useAppStore();
+
+  useEffect(() => {
+    // Load tokens on app start
+    loadTokens();
+
+    // Start price update interval (1 second as per requirements)
+    const priceInterval = setInterval(() => {
+      updatePrices();
+    }, 1000);
+
+    // Initial price fetch
+    updatePrices();
+
+    return () => clearInterval(priceInterval);
+  }, [loadTokens, updatePrices]);
+
+  const renderRoutes = (routeList: typeof routes) => {
+    return routeList.map((route, index) => {
+      if (route.children) {
+        return (
+          <Route key={index} path={route.path} element={route.element}>
+            {route.children.map((child, childIndex) => (
+              <Route key={childIndex} path={child.path} element={child.element} />
+            ))}
+          </Route>
+        );
+      }
+      return <Route key={index} path={route.path} element={route.element} />;
+    });
+  };
+
   return (
-    <Router>
-      {/*<AuthProvider>*/}
-      {/*<RouteGuard>*/}
-      <IntersectObserver />
-      <div className="flex flex-col min-h-screen">
-        {/*<Header />*/}
-        <main className="flex-grow">
-          <Routes>
-          {routes.map((route, index) => (
-            <Route
-              key={index}
-              path={route.path}
-              element={route.element}
-            />
-          ))}
-          <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
-      </div>
-      <Toaster />
-      {/*</RouteGuard>*/}
-      {/*</AuthProvider>*/}
-    </Router>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+      <Router>
+        <AuthProvider>
+          <RouteGuard>
+            <IntersectObserver />
+            <Routes>{renderRoutes(routes)}</Routes>
+            <Toaster position="top-right" richColors />
+          </RouteGuard>
+        </AuthProvider>
+      </Router>
+    </ThemeProvider>
   );
 };
 

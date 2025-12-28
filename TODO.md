@@ -1,0 +1,101 @@
+# Task: Build LETHEX Digital Asset Fund Management System
+
+## Plan
+- [x] Step 1: Design System Setup
+  - [x] Create premium dark fintech color scheme in index.css
+  - [x] Update tailwind.config.js with custom colors
+  - [x] Add gradient utilities and custom animations
+- [x] Step 2: Database Schema & Backend Setup
+  - [x] Initialize Supabase
+  - [x] Create database schema (profiles, holders, assets, transactions, commissions)
+  - [x] Set up RLS policies for admin/holder access
+  - [x] Create helper functions and views
+  - [x] Insert initial token whitelist data
+- [x] Step 3: Authentication System
+  - [x] Set up Supabase Auth with access code system
+  - [x] Create AuthContext with admin/holder role management
+  - [x] Update RouteGuard for access control
+  - [x] Disable email verification using supabase_verification
+- [x] Step 4: Core Types & Services
+  - [x] Define TypeScript types for all entities
+  - [x] Create Supabase API service layer
+  - [x] Set up Zustand store for global state
+  - [x] Create CoinGecko price service with caching
+- [x] Step 5: Shared Components
+  - [x] Create Layout components (Admin & Holder)
+  - [x] Build TokenSelector modal component
+  - [x] Create ConfirmDialog component (no browser alerts)
+  - [x] Build TransactionDetailModal component (pending)
+  - [x] Create LoadingSkeleton components
+- [x] Step 6: Login & Access Control
+  - [x] Build unified login page (admin + holder access codes)
+  - [x] Implement access code validation logic
+  - [x] Add session persistence
+  - [x] Create EXIT functionality
+- [x] Step 7: Admin Panel - Settings
+  - [x] Create admin layout with navigation
+  - [x] Build Settings page (change admin access code)
+  - [x] Add confirmation dialogs for sensitive actions
+- [x] Step 8: Admin Panel - Holder Management
+  - [x] Build Holders list page
+  - [x] Create Add Holder form with auto-generated access code
+  - [x] Build Edit Holder functionality
+  - [x] Implement Delete Holder with confirmation
+- [ ] Step 9: Admin Panel - Asset Management
+  - [ ] Build Asset Assignment interface
+  - [ ] Create Edit Asset Amount functionality
+  - [ ] Implement token whitelist enforcement
+  - [ ] Add portfolio view per holder
+- [ ] Step 10: Admin Panel - Transaction Approval
+  - [ ] Build pending transactions queue
+  - [ ] Create Swap approval with execution price input
+  - [ ] Implement Buy request approval
+  - [ ] Add Sell request handling (Telegram message)
+  - [ ] Build transaction detail view
+- [ ] Step 11: Admin Panel - History & Reporting
+  - [ ] Build complete transaction history view
+  - [ ] Create commission summary dashboard
+  - [ ] Add per-holder fee breakdown
+  - [ ] Implement date/time filtering
+- [ ] Step 12: Holder Dashboard - Portfolio
+  - [ ] Build portfolio view with live prices
+  - [ ] Implement real-time price updates (1s interval)
+  - [ ] Display balances in USDT and KGS
+  - [ ] Add total portfolio value calculation
+- [ ] Step 13: Holder Dashboard - Transaction Requests
+  - [ ] Build Swap request form with fee preview
+  - [ ] Add percentage buttons (25%/50%/75%/100%)
+  - [ ] Create Buy request form
+  - [ ] Build Sell request form with Telegram message
+  - [ ] Implement balance validation
+- [ ] Step 14: Holder Dashboard - History
+  - [ ] Build personal transaction history view
+  - [ ] Add transaction detail modal
+  - [ ] Implement status indicators
+- [ ] Step 15: Responsive Design & Polish
+  - [ ] Test mobile layout (hamburger menu, cards)
+  - [ ] Test desktop layout (sidebar, tables)
+  - [ ] Add smooth animations with Framer Motion
+  - [ ] Implement empty states
+  - [ ] Add loading states
+- [ ] Step 16: Final Testing & Lint
+  - [ ] Run npm run lint and fix all issues
+  - [ ] Test all user flows
+  - [ ] Verify token whitelist enforcement
+  - [ ] Test access control system
+  - [ ] Verify price updates and caching
+
+## Notes
+- **Authentication**: Using custom access code system (not traditional email/password)
+  - Admin access code: stored in database, changeable via Settings
+  - Holder access codes: auto-generated, unique per holder
+  - Single unified login input checks admin code first, then holder codes
+- **Backend**: Using Supabase instead of Node.js + Express + SQLite
+- **Token Whitelist**: Top 50 native coins only, enforced at backend level
+- **No Real Money**: All transactions are informational, require manual admin approval
+- **Price Updates**: CoinGecko API with 1-second refresh, backend caching
+- **Design**: Premium dark fintech aesthetic with electric blue (#00d4ff) and amber (#fbbf24)
+- **State Management**: Zustand for global state
+- **Animations**: Framer Motion (motion package)
+- **No Browser Alerts**: Custom modal components for all confirmations
+- **Progress**: Core infrastructure complete. Admin dashboard, settings, and holder management functional. Need to complete remaining admin pages and holder pages.
