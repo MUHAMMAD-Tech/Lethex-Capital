@@ -29,10 +29,14 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      console.log('Kirish kodi tekshirilmoqda:', accessCode);
+      
       // Step 1: Check if it's the admin access code
       const isAdmin = await verifyAdminAccessCode(accessCode);
+      console.log('Admin tekshiruvi natijasi:', isAdmin);
 
       if (isAdmin) {
+        console.log('Admin sifatida kirish...');
         // Admin login - use Supabase Auth
         // For admin, we'll use a fixed username "admin" with the access code as password
         let authSuccess = false;
@@ -41,13 +45,18 @@ export default function LoginPage() {
         const { error: signInError } = await signIn('admin', accessCode);
 
         if (signInError) {
+          console.log('SignIn xatosi, SignUp urinilmoqda:', signInError.message);
           // If sign in fails, try to sign up (first time admin)
           const { error: signUpError } = await signUp('admin', accessCode);
           
           if (!signUpError) {
+            console.log('SignUp muvaffaqiyatli');
             authSuccess = true;
+          } else {
+            console.error('SignUp xatosi:', signUpError.message);
           }
         } else {
+          console.log('SignIn muvaffaqiyatli');
           authSuccess = true;
         }
 
@@ -62,8 +71,10 @@ export default function LoginPage() {
         }
       }
 
+      console.log('Holder sifatida tekshirilmoqda...');
       // Step 2: Check if it's a holder access code
       const holder = await getHolderByAccessCode(accessCode);
+      console.log('Holder topildi:', holder);
 
       if (holder) {
         // Holder login - store in session
@@ -74,9 +85,10 @@ export default function LoginPage() {
       }
 
       // Step 3: Invalid access code
+      console.log('Kirish kodi topilmadi');
       toast.error('Noto\'g\'ri kirish kodi');
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Login xatosi:', error);
       toast.error('Kirish paytida xatolik yuz berdi');
     } finally {
       setLoading(false);
