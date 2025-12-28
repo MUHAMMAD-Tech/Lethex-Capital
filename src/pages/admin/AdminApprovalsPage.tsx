@@ -70,7 +70,7 @@ export default function AdminApprovalsPage() {
 
     setProcessing(true);
 
-    const success = await approveTransaction(
+    const result = await approveTransaction(
       selectedTransaction.id,
       'admin', // In a real system, this would be the actual admin user ID
       selectedTransaction.transaction_type === 'swap' ? executionPrice : undefined
@@ -78,14 +78,14 @@ export default function AdminApprovalsPage() {
 
     setProcessing(false);
 
-    if (success) {
+    if (result.success) {
       toast.success('Transaction approved successfully');
       setShowApproveDialog(false);
       setSelectedTransaction(null);
       setExecutionPrice('');
       loadTransactions();
     } else {
-      toast.error('Failed to approve transaction');
+      toast.error(result.error || 'Failed to approve transaction');
     }
   };
 
