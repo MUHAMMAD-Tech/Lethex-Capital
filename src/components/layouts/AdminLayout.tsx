@@ -19,13 +19,13 @@ import {
 import { useState } from 'react';
 
 const navigation = [
-  { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-  { name: 'Settings', href: '/admin/settings', icon: Settings },
-  { name: 'Holders', href: '/admin/holders', icon: Users },
-  { name: 'Assets', href: '/admin/assets', icon: Wallet },
-  { name: 'Approvals', href: '/admin/approvals', icon: CheckCircle },
-  { name: 'History', href: '/admin/history', icon: History },
-  { name: 'Commissions', href: '/admin/commissions', icon: DollarSign },
+  { name: 'Boshqaruv paneli', href: '/admin/dashboard', icon: LayoutDashboard },
+  { name: 'Sozlamalar', href: '/admin/settings', icon: Settings },
+  { name: 'Holderlar', href: '/admin/holders', icon: Users },
+  { name: 'Aktivlar', href: '/admin/assets', icon: Wallet },
+  { name: 'Tasdiqlar', href: '/admin/approvals', icon: CheckCircle },
+  { name: 'Tarix', href: '/admin/history', icon: History },
+  { name: 'Komissiyalar', href: '/admin/commissions', icon: DollarSign },
 ];
 
 export function AdminLayout() {
@@ -36,7 +36,7 @@ export function AdminLayout() {
 
   const handleLogout = async () => {
     await signOut();
-    toast.success('Logged out successfully');
+    toast.success('Tizimdan muvaffaqiyatli chiqdingiz');
     navigate('/login');
   };
 
@@ -71,7 +71,7 @@ export function AdminLayout() {
           {/* Logo */}
           <div className="p-6 border-b border-border">
             <h1 className="text-2xl font-bold gradient-text">LETHEX</h1>
-            <p className="text-xs text-muted-foreground mt-1">Admin Panel</p>
+            <p className="text-xs text-muted-foreground mt-1">Admin paneli</p>
           </div>
 
           {/* Navigation */}
@@ -82,7 +82,7 @@ export function AdminLayout() {
           {/* User Info & Logout */}
           <div className="p-4 border-t border-border">
             <div className="mb-3 px-4 py-2 bg-secondary/50 rounded-lg">
-              <p className="text-xs text-muted-foreground">Logged in as</p>
+              <p className="text-xs text-muted-foreground">Tizimga kirgan</p>
               <p className="text-sm font-semibold text-foreground">Admin</p>
             </div>
             <Button
@@ -91,7 +91,7 @@ export function AdminLayout() {
               onClick={handleLogout}
             >
               <LogOut className="mr-2 h-4 w-4" />
-              Logout
+              Chiqish
             </Button>
           </div>
         </div>
@@ -113,7 +113,7 @@ export function AdminLayout() {
                 {/* Logo */}
                 <div className="p-6 border-b border-border">
                   <h1 className="text-2xl font-bold gradient-text">LETHEX</h1>
-                  <p className="text-xs text-muted-foreground mt-1">Admin Panel</p>
+                  <p className="text-xs text-muted-foreground mt-1">Admin paneli</p>
                 </div>
 
                 {/* Navigation */}
@@ -124,7 +124,7 @@ export function AdminLayout() {
                 {/* User Info & Logout */}
                 <div className="p-4 border-t border-border">
                   <div className="mb-3 px-4 py-2 bg-secondary/50 rounded-lg">
-                    <p className="text-xs text-muted-foreground">Logged in as</p>
+                    <p className="text-xs text-muted-foreground">Tizimga kirgan</p>
                     <p className="text-sm font-semibold text-foreground">Admin</p>
                   </div>
                   <Button
@@ -133,7 +133,7 @@ export function AdminLayout() {
                     onClick={handleLogout}
                   >
                     <LogOut className="mr-2 h-4 w-4" />
-                    Logout
+                    Chiqish
                   </Button>
                 </div>
               </div>

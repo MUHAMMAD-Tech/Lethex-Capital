@@ -22,7 +22,7 @@ export default function LoginPage() {
     e.preventDefault();
 
     if (!accessCode.trim()) {
-      toast.error('Please enter an access code');
+      toast.error('Iltimos, kirish kodini kiriting');
       return;
     }
 
@@ -35,22 +35,31 @@ export default function LoginPage() {
       if (isAdmin) {
         // Admin login - use Supabase Auth
         // For admin, we'll use a fixed username "admin" with the access code as password
+        let authSuccess = false;
+        
+        // Try to sign in first
         const { error: signInError } = await signIn('admin', accessCode);
 
         if (signInError) {
           // If sign in fails, try to sign up (first time admin)
           const { error: signUpError } = await signUp('admin', accessCode);
           
-          if (signUpError) {
-            toast.error('Admin authentication failed');
-            setLoading(false);
-            return;
+          if (!signUpError) {
+            authSuccess = true;
           }
+        } else {
+          authSuccess = true;
         }
 
-        toast.success('Welcome, Admin!');
-        navigate('/admin/dashboard');
-        return;
+        if (authSuccess) {
+          toast.success('Xush kelibsiz, Admin!');
+          navigate('/admin/dashboard');
+          return;
+        } else {
+          toast.error('Admin autentifikatsiyasi muvaffaqiyatsiz');
+          setLoading(false);
+          return;
+        }
       }
 
       // Step 2: Check if it's a holder access code
@@ -59,16 +68,16 @@ export default function LoginPage() {
       if (holder) {
         // Holder login - store in session
         setCurrentHolder(holder);
-        toast.success(`Welcome, ${holder.name}!`);
+        toast.success(`Xush kelibsiz, ${holder.name}!`);
         navigate('/holder/dashboard');
         return;
       }
 
       // Step 3: Invalid access code
-      toast.error('Invalid access code');
+      toast.error('Noto\'g\'ri kirish kodi');
     } catch (error) {
       console.error('Login error:', error);
-      toast.error('An error occurred during login');
+      toast.error('Kirish paytida xatolik yuz berdi');
     } finally {
       setLoading(false);
     }
@@ -91,7 +100,7 @@ export default function LoginPage() {
               LETHEX
             </CardTitle>
             <CardDescription className="text-base">
-              Digital Asset Fund Management System
+              Raqamli aktivlar fondini boshqarish tizimi
             </CardDescription>
           </CardHeader>
 
@@ -99,12 +108,12 @@ export default function LoginPage() {
             <form onSubmit={handleLogin} className="space-y-6">
               <div className="space-y-2">
                 <label htmlFor="accessCode" className="text-sm font-medium text-foreground">
-                  Access Code
+                  Kirish kodi
                 </label>
                 <Input
                   id="accessCode"
                   type="password"
-                  placeholder="Enter your access code"
+                  placeholder="Kirish kodingizni kiriting"
                   value={accessCode}
                   onChange={(e) => setAccessCode(e.target.value)}
                   disabled={loading}
@@ -112,7 +121,7 @@ export default function LoginPage() {
                   autoFocus
                 />
                 <p className="text-xs text-muted-foreground">
-                  Enter admin or holder access code to continue
+                  Davom etish uchun admin yoki holder kirish kodini kiriting
                 </p>
               </div>
 
@@ -124,16 +133,16 @@ export default function LoginPage() {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Verifying...
+                    Tekshirilmoqda...
                   </>
                 ) : (
-                  'Access System'
+                  'Tizimga kirish'
                 )}
               </Button>
             </form>
 
             <div className="mt-6 text-center text-xs text-muted-foreground">
-              <p>Secure access • Real-time tracking • Manual approval</p>
+              <p>Xavfsiz kirish • Real vaqtda kuzatish • Qo'lda tasdiqlash</p>
             </div>
           </CardContent>
         </Card>
@@ -144,7 +153,7 @@ export default function LoginPage() {
           transition={{ delay: 0.3, duration: 0.5 }}
           className="mt-6 text-center text-sm text-muted-foreground"
         >
-          <p>© 2025 LETHEX. All rights reserved.</p>
+          <p>© 2025 LETHEX. Barcha huquqlar himoyalangan.</p>
         </motion.div>
       </motion.div>
     </div>
