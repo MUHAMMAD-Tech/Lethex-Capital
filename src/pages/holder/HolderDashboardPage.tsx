@@ -52,7 +52,7 @@ export default function HolderDashboardPage() {
     let totalKGS = 0;
 
     for (const asset of assets) {
-      const price = prices[asset.token_symbol];
+      const price = prices[asset.token_symbol.toLowerCase()];
       if (price) {
         const amount = parseFloat(asset.amount);
         totalUSDT += amount * price.price_usdt;
