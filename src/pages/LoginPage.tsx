@@ -1,3 +1,4 @@
+// src/pages/LoginPage.tsx - TO'LIQ FAYL
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
@@ -33,116 +34,122 @@ export default function LoginPage() {
 
       // Step 1: Admin access code ni tekshirish
       const isAdmin = await verifyAdminAccessCode(accessCode);
-      console.log('Admin tekshiruvi natijasi:', isAdmin);
-
+      
       if (isAdmin) {
-        console.log('Admin sifatida kirish...');
+        console.log('Admin access code topildi');
         
-        // Admin login yoki register
-        let authSuccess = false;
+        // Admin uchun kirish
         const adminUsername = 'admin';
+        let authSuccess = false;
 
-        // Avval signIn urinib ko'rish
+        // SignIn urinib ko'rish
         const { error: signInError } = await signIn(adminUsername, accessCode);
 
         if (signInError) {
-          console.log('SignIn xatosi, SignUp urinilmoqda:', signInError.message);
+          console.log('Admin SignIn xatosi, SignUp urinilmoqda:', signInError.message);
           
-          // Agar signIn xato bersa, signUp qilish
+          // SignUp qilish
           const { error: signUpError } = await signUp(adminUsername, accessCode);
-
+          
           if (signUpError) {
-            console.error('SignUp xatosi:', signUpError.message);
+            console.error('Admin SignUp xatosi:', signUpError.message);
             toast.error('Admin yaratishda xatolik');
             setLoading(false);
             return;
-          } else {
-            console.log('Admin SignUp muvaffaqiyatli');
-            
-            // Yangi admin yaratilganda role ni o'rnatish
-            // Bir oz kutish kerak, chunki profile avtomatik yaratiladi
-            setTimeout(async () => {
-              const { data: { user } } = await supabase.auth.getUser();
-              if (user) {
-                await updateProfileRole(user.id, 'admin');
-              }
-            }, 1000);
-            
-            authSuccess = true;
           }
+          
+          // Yangi admin yaratildi, role ni o'rnatish
+          console.log('Yangi admin yaratildi');
+          
+          // Bir oz kutish kerak, chunki profile avtomatik yaratiladi
+          setTimeout(async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              await updateProfileRole(user.id, 'admin');
+              console.log('Admin role o\'rnatildi');
+            }
+          }, 1500);
+          
+          authSuccess = true;
         } else {
           console.log('Admin SignIn muvaffaqiyatli');
-          authSuccess = true;
           
           // Mavjud adminning role ni tekshirish va yangilash
           const { data: { user } } = await supabase.auth.getUser();
           if (user) {
             await updateProfileRole(user.id, 'admin');
           }
+          
+          authSuccess = true;
         }
 
         if (authSuccess) {
           toast.success('Xush kelibsiz, Admin!');
-          navigate('/admin/dashboard');
+          setTimeout(() => {
+            navigate('/admin/dashboard');
+          }, 1000);
           return;
         }
       }
 
       // Step 2: Holder access code ni tekshirish
-      console.log('Holder sifatida tekshirilmoqda...');
+      console.log('Holder access code ni tekshirilmoqda...');
       const holder = await getHolderByAccessCode(accessCode);
-      console.log('Holder topildi:', holder);
-
+      
       if (holder) {
-        // Holder uchun username olish
-        const holderUsername = holder.username || `holder_${holder.id.slice(0, 8)}`;
+        console.log('Holder topildi:', holder.name);
         
-        // Holder login yoki register
+        // Holder uchun username
+        const holderUsername = holder.username || `holder_${holder.id.slice(0, 8)}`;
         let holderAuthSuccess = false;
 
-        // SignIn urinib ko'rish
+        // Holder SignIn
         const { error: holderSignInError } = await signIn(holderUsername, accessCode);
 
         if (holderSignInError) {
           console.log('Holder SignIn xatosi, SignUp urinilmoqda:', holderSignInError.message);
           
-          // Agar signIn xato bersa, signUp qilish
+          // Holder SignUp
           const { error: holderSignUpError } = await signUp(holderUsername, accessCode);
-
+          
           if (holderSignUpError) {
             console.error('Holder SignUp xatosi:', holderSignUpError.message);
             toast.error('Holder yaratishda xatolik');
             setLoading(false);
             return;
-          } else {
-            console.log('Holder SignUp muvaffaqiyatli');
-            
-            // Yangi holder yaratilganda role ni o'rnatish
-            setTimeout(async () => {
-              const { data: { user } } = await supabase.auth.getUser();
-              if (user) {
-                await updateProfileRole(user.id, 'holder');
-              }
-            }, 1000);
-            
-            holderAuthSuccess = true;
           }
+          
+          // Yangi holder yaratildi, role ni o'rnatish
+          console.log('Yangi holder yaratildi');
+          
+          setTimeout(async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              await updateProfileRole(user.id, 'holder');
+              console.log('Holder role o\'rnatildi');
+            }
+          }, 1500);
+          
+          holderAuthSuccess = true;
         } else {
           console.log('Holder SignIn muvaffaqiyatli');
-          holderAuthSuccess = true;
           
           // Mavjud holderni role ni tekshirish va yangilash
           const { data: { user } } = await supabase.auth.getUser();
           if (user) {
             await updateProfileRole(user.id, 'holder');
           }
+          
+          holderAuthSuccess = true;
         }
 
         if (holderAuthSuccess) {
-          // Holder ma'lumotlarini store ga saqlash
+          // Holder ma'lumotlarini saqlash
           setCurrentHolder(holder);
           toast.success(`Xush kelibsiz, ${holder.name}!`);
-          navigate('/holder/dashboard');
+          setTimeout(() => {
+            navigate('/holder/dashboard');
+          }, 1000);
           return;
         }
       }
