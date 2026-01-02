@@ -1,5 +1,5 @@
 // LETHEX Admin Layout Component
-import { Outlet, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -19,35 +19,14 @@ import {
   LayoutDashboard,
   PieChart,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut, profile, user, loading } = useAuth();
+  const { signOut, profile } = useAuth();
   const { t } = useI18n();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  // Role tekshiruvi
-  useEffect(() => {
-    if (!loading && (!user || !profile || profile.role !== 'admin')) {
-      console.log('Admin emas, login sahifasiga yo\'naltirilmoqda');
-      navigate('/login', { replace: true });
-    }
-  }, [user, profile, loading, navigate]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  // Agar admin bo'lmasa, login sahifasiga yo'naltir
-  if (!user || !profile || profile.role !== 'admin') {
-    return <Navigate to="/login" replace />;
-  }
 
   const navigation = [
     { name: t('admin.dashboard'), href: '/admin/dashboard', icon: LayoutDashboard },
@@ -62,7 +41,7 @@ export function AdminLayout() {
 
   const handleLogout = async () => {
     await signOut();
-    toast.success(t('auth.logoutSuccess'));
+    toast.success(t('auth.loginSuccess'));
     navigate('/login');
   };
 
@@ -110,9 +89,6 @@ export function AdminLayout() {
             <div className="mb-3 px-4 py-2 bg-secondary/50 rounded-lg">
               <p className="text-xs text-muted-foreground">{t('auth.login')}</p>
               <p className="text-sm font-semibold text-foreground">Admin</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {profile?.username || user?.email}
-              </p>
             </div>
             <Button
               variant="outline"
@@ -162,9 +138,6 @@ export function AdminLayout() {
                     <div className="mb-3 px-4 py-2 bg-secondary/50 rounded-lg">
                       <p className="text-xs text-muted-foreground">{t('auth.login')}</p>
                       <p className="text-sm font-semibold text-foreground">Admin</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {profile?.username || user?.email}
-                      </p>
                     </div>
                     <Button
                       variant="outline"
