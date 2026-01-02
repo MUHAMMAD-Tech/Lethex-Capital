@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAppStore } from '@/store/appStore';
 
 interface RouteGuardProps {
   children: React.ReactNode;
@@ -25,6 +26,7 @@ function patternMosKeladimi(path: string, patterns: string[]) {
 
 export function RouteGuard({ children }: RouteGuardProps) {
   const { user, profile, loading } = useAuth();
+  const { currentHolder } = useAppStore();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -46,7 +48,7 @@ export function RouteGuard({ children }: RouteGuardProps) {
 
     // Agar foydalanuvchi login qilgan bo'lsa
     if (user && profile) {
-      console.log('Foydalanuvchi login qilgan:', profile.role);
+      console.log('Foydalanuvchi login qilgan. Role:', profile.role);
       console.log('Joriy yo\'l:', currentPath);
 
       // Agar login sahifasida bo'lsa, role bo'yicha dashboardga yo'naltir
@@ -89,6 +91,16 @@ export function RouteGuard({ children }: RouteGuardProps) {
         }
       }
 
+      // Holder uchun qo'shimcha tekshiruv
+      if (holderYoilmi && profile.role === 'holder') {
+        // Agar holder sahifasida bo'lsa va currentHolder yo'q bo'lsa
+        if (!currentHolder) {
+          console.log('Holder ma\'lumotlari yo\'q, login sahifasiga qaytish');
+          navigate('/login', { replace: true });
+          return;
+        }
+      }
+
       // Agar hech qanday maxsus yo'lda bo'lmasa va role mavjud bo'lsa
       if (!adminYoilmi && !holderYoilmi && profile.role) {
         if (profile.role === 'admin') {
@@ -98,7 +110,7 @@ export function RouteGuard({ children }: RouteGuardProps) {
         }
       }
     }
-  }, [user, profile, loading, location.pathname, navigate]);
+  }, [user, profile, loading, currentHolder, location.pathname, navigate]);
 
   if (loading) {
     return (
