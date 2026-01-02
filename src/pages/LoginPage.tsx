@@ -1,18 +1,24 @@
 // LETHEX Login Page - Unified Access Code System
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'motion/react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
-import { useAppStore } from '@/store/appStore';
-import { verifyAdminAccessCode, getHolderByAccessCode } from '@/db/api';
-import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "motion/react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
+import { useAppStore } from "@/store/appStore";
+import { verifyAdminAccessCode, getHolderByAccessCode } from "@/db/api";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
-  const [accessCode, setAccessCode] = useState('');
+  const [accessCode, setAccessCode] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { signIn, signUp } = useAuth();
@@ -22,74 +28,118 @@ export default function LoginPage() {
     e.preventDefault();
 
     if (!accessCode.trim()) {
-      toast.error('Iltimos, kirish kodini kiriting');
+      toast.error("Iltimos, kirish kodini kiriting");
       return;
     }
 
     setLoading(true);
 
     try {
-      console.log('Kirish kodi tekshirilmoqda:', accessCode);
-      
+      console.log("Kirish kodi tekshirilmoqda:", accessCode);
+
       // Step 1: Check if it's the admin access code
       const isAdmin = await verifyAdminAccessCode(accessCode);
-      console.log('Admin tekshiruvi natijasi:', isAdmin);
+      console.log("Admin tekshiruvi natijasi:", isAdmin);
 
       if (isAdmin) {
-        console.log('Admin sifatida kirish...');
+        console.log("Admin sifatida kirish...");
         // Admin login - use Supabase Auth
-        // For admin, we'll use a fixed username "admin" with the access code as password
         let authSuccess = false;
-        
+
         // Try to sign in first
-        const { error: signInError } = await signIn('admin', accessCode);
+        const { error: signInError } = await signIn("admin", accessCode);
 
         if (signInError) {
-          console.log('SignIn xatosi, SignUp urinilmoqda:', signInError.message);
+          console.log(
+            "SignIn xatosi, SignUp urinilmoqda:",
+            signInError.message
+          );
           // If sign in fails, try to sign up (first time admin)
-          const { error: signUpError } = await signUp('admin', accessCode);
-          
+          const { error: signUpError } = await signUp("admin", accessCode);
+
           if (!signUpError) {
-            console.log('SignUp muvaffaqiyatli');
+            console.log("SignUp muvaffaqiyatli");
             authSuccess = true;
           } else {
-            console.error('SignUp xatosi:', signUpError.message);
+            console.error("SignUp xatosi:", signUpError.message);
           }
         } else {
-          console.log('SignIn muvaffaqiyatli');
+          console.log("SignIn muvaffaqiyatli");
           authSuccess = true;
         }
 
         if (authSuccess) {
-          toast.success('Xush kelibsiz, Admin!');
-          navigate('/admin/dashboard');
+          toast.success("Xush kelibsiz, Admin!");
+          navigate("/admin/dashboard");
           return;
         } else {
-          toast.error('Admin autentifikatsiyasi muvaffaqiyatsiz');
+          toast.error("Admin autentifikatsiyasi muvaffaqiyatsiz");
           setLoading(false);
           return;
         }
       }
 
-      console.log('Holder sifatida tekshirilmoqda...');
+      console.log("Holder sifatida tekshirilmoqda...");
       // Step 2: Check if it's a holder access code
       const holder = await getHolderByAccessCode(accessCode);
-      console.log('Holder topildi:', holder);
+      console.log("Holder topildi:", holder);
 
       if (holder) {
-        // Holder login - store in session
-        setCurrentHolder(holder);
-        toast.success(`Xush kelibsiz, ${holder.name}!`);
-        navigate('/holder/dashboard');
-        return;
+        // MUHIM: Holder uchun ham Supabase Auth sessiyasi yaratish kerak
+        console.log("Holder uchun auth sessiyasi yaratilmoqda...");
+
+        // Holder username sifatida holder_id ishlatamiz
+        const holderUsername = `holder_${holder.id}`;
+        let authSuccess = false;
+
+        // Try to sign in first
+        const { error: signInError } = await signIn(holderUsername, accessCode);
+
+        if (signInError) {
+          console.log(
+            "Holder SignIn xatosi, SignUp urinilmoqda:",
+            signInError.message
+          );
+          // If sign in fails, try to sign up (first time holder)
+          const { error: signUpError } = await signUp(
+            holderUsername,
+            accessCode
+          );
+
+          if (!signUpError) {
+            console.log("Holder SignUp muvaffaqiyatli");
+            authSuccess = true;
+          } else {
+            console.error("Holder SignUp xatosi:", signUpError.message);
+          }
+        } else {
+          console.log("Holder SignIn muvaffaqiyatli");
+          authSuccess = true;
+        }
+
+        if (authSuccess) {
+          // Set holder in store
+          setCurrentHolder(holder);
+          toast.success(`Xush kelibsiz, ${holder.name}!`);
+
+          // Navigate to holder dashboard
+          setTimeout(() => {
+            navigate("/holder/dashboard");
+          }, 500);
+          return;
+        } else {
+          toast.error("Holder autentifikatsiyasi muvaffaqiyatsiz");
+          setLoading(false);
+          return;
+        }
       }
 
       // Step 3: Invalid access code
-      console.log('Kirish kodi topilmadi');
-      toast.error('Noto\'g\'ri kirish kodi');
+      console.log("Kirish kodi topilmadi");
+      toast.error("Noto'g'ri kirish kodi");
     } catch (error) {
-      console.error('Login xatosi:', error);
-      toast.error('Kirish paytida xatolik yuz berdi');
+      console.error("Login xatosi:", error);
+      toast.error("Kirish paytida xatolik yuz berdi");
     } finally {
       setLoading(false);
     }
@@ -106,9 +156,9 @@ export default function LoginPage() {
         <Card className="border-border bg-card card-glow">
           <CardHeader className="space-y-4 text-center">
             <div className="mx-auto w-24 h-24 flex items-center justify-center">
-              <img 
-                src="/lethex-logo.png" 
-                alt="LETHEX Logo" 
+              <img
+                src="/lethex-logo.png"
+                alt="LETHEX Logo"
                 className="w-full h-full object-contain"
               />
             </div>
@@ -123,7 +173,10 @@ export default function LoginPage() {
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-6">
               <div className="space-y-2">
-                <label htmlFor="accessCode" className="text-sm font-medium text-foreground">
+                <label
+                  htmlFor="accessCode"
+                  className="text-sm font-medium text-foreground"
+                >
                   Kirish kodi
                 </label>
                 <Input
@@ -152,7 +205,7 @@ export default function LoginPage() {
                     Tekshirilmoqda...
                   </>
                 ) : (
-                  'Tizimga kirish'
+                  "Tizimga kirish"
                 )}
               </Button>
             </form>
