@@ -1,4 +1,4 @@
-// LETHEX Holder Dashboard Page
+// LETHEX Holder Portfolio Page
 
 import { useEffect, useState } from 'react';
 
@@ -6,55 +6,34 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 import { Skeleton } from '@/components/ui/skeleton';
 
-import { Wallet, TrendingUp, Clock } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown } from 'lucide-react';
+
+import { getAssetsByHolder, getAllTokens } from '@/db/api';
 
 import { useAppStore } from '@/store/appStore';
 
-import { getAssetsByHolderId, getTransactionsByHolderId } from '@/db/api';
-
-import type { AssetWithToken, TransactionWithDetails } from '@/types/types';
+import type { Asset, Token } from '@/types/types';
 
 
-export default function HolderDashboardPage() {
-
-  const { currentHolder, prices } = useAppStore();
+export default function HolderPortfolioPage() {
 
   const [loading, setLoading] = useState(true);
 
-  const [assets, setAssets] = useState<AssetWithToken[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
 
-  const [recentTransactions, setRecentTransactions] = useState<TransactionWithDetails[]>([]);
+  const [tokens, setTokens] = useState<Token[]>([]);
 
-  const [totalValueUSDT, setTotalValueUSDT] = useState(0);
-
-  const [totalValueKGS, setTotalValueKGS] = useState(0);
+  const { currentHolder, prices } = useAppStore();
 
 
   useEffect(() => {
 
-    if (currentHolder) {
-
-      loadDashboardData();
-
-    }
+    loadData();
 
   }, [currentHolder]);
 
 
-  useEffect(() => {
-
-    // Recalculate portfolio value when prices update
-
-    if (assets.length > 0 && Object.keys(prices).length > 0) {
-
-      calculatePortfolioValue();
-
-    }
-
-  }, [prices, assets]);
-
-
-  const loadDashboardData = async () => {
+  const loadData = async () => {
 
     if (!currentHolder) {
 
@@ -64,135 +43,96 @@ export default function HolderDashboardPage() {
 
     }
 
+    
 
-    console.log('🔄 Dashboard ma\'lumotlari yuklanmoqda...');
+    console.log('🔄 Portfolio ma\'lumotlari yuklanmoqda...');
 
     console.log('📋 Holder ID:', currentHolder.id);
 
     console.log('👤 Holder nomi:', currentHolder.name);
 
+    
 
     setLoading(true);
 
-    try {
+    const [assetsData, tokensData] = await Promise.all([
 
-      const [assetsData, transactionsData] = await Promise.all([
+      getAssetsByHolder(currentHolder.id),
 
-        getAssetsByHolderId(currentHolder.id),
+      getAllTokens(),
 
-        getTransactionsByHolderId(currentHolder.id),
+    ]);
 
-      ]);
+    
 
+    console.log('📊 Assets data:', assetsData);
 
-      console.log('📊 Assets data:', assetsData);
+    console.log('🪙 Tokens data:', tokensData.length, 'tokens');
 
-      console.log('📜 Transactions data:', transactionsData);
+    
 
+    setAssets(assetsData);
 
-      setAssets(assetsData);
+    setTokens(tokensData);
 
-      setRecentTransactions(transactionsData.slice(0, 5));
+    setLoading(false);
 
-      
+    
 
-      console.log(`✅ Dashboard yuklandi: ${assetsData.length} ta asset, ${transactionsData.length} ta transaction`);
-
-    } catch (error) {
-
-      console.error('❌ Dashboard yuklashda xatolik:', error);
-
-    } finally {
-
-      setLoading(false);
-
-    }
+    console.log(`✅ Portfolio yuklandi: ${assetsData.length} ta asset`);
 
   };
 
 
-  const calculatePortfolioValue = () => {
+  const getTokenPrice = (symbol: string): number => {
 
-    let totalUSDT = 0;
+    const priceData = prices[symbol.toLowerCase()];
 
-    let totalKGS = 0;
-
-
-    for (const asset of assets) {
-
-      const price = prices[asset.token_symbol.toLowerCase()];
-
-      if (price) {
-
-        const amount = parseFloat(asset.amount);
-
-        totalUSDT += amount * price.price_usdt;
-
-        totalKGS += amount * price.price_kgs;
-
-      }
-
-    }
-
-
-    setTotalValueUSDT(totalUSDT);
-
-    setTotalValueKGS(totalKGS);
+    return priceData?.price_usdt || 0;
 
   };
 
 
-  const stats = [
+  const calculateValue = (amount: string | number, symbol: string): number => {
 
-    {
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
 
-      title: 'Total Assets',
+    return numAmount * getTokenPrice(symbol);
 
-      value: assets.length,
+  };
 
-      icon: Wallet,
 
-      color: 'text-primary',
+  const getTotalPortfolioValue = (): number => {
 
-    },
+    return assets.reduce((total, asset) => {
 
-    {
+      return total + calculateValue(asset.amount, asset.token_symbol);
 
-      title: 'Portfolio Value (USDT)',
+    }, 0);
 
-      value: `$${totalValueUSDT.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+  };
 
-      icon: TrendingUp,
 
-      color: 'text-success',
+  const getTokenInfo = (symbol: string): Token | undefined => {
 
-    },
+    return tokens.find(t => t.symbol === symbol);
 
-    {
+  };
 
-      title: 'Portfolio Value (KGS)',
 
-      value: `${totalValueKGS.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} KGS`,
+  if (!currentHolder) {
 
-      icon: TrendingUp,
+    return (
 
-      color: 'text-success',
+      <div className="flex items-center justify-center min-h-[400px]">
 
-    },
+        <p className="text-muted-foreground">Holder ma'lumotlari topilmadi</p>
 
-    {
+      </div>
 
-      title: 'Pending Requests',
+    );
 
-      value: recentTransactions.filter(tx => tx.status === 'pending').length,
-
-      icon: Clock,
-
-      color: 'text-warning',
-
-    },
-
-  ];
+  }
 
 
   return (
@@ -203,52 +143,260 @@ export default function HolderDashboardPage() {
 
       <div>
 
-        <h1 className="text-3xl xl:text-4xl font-bold text-foreground">
-
-          Welcome, {currentHolder?.name}
-
-        </h1>
+        <h1 className="text-3xl xl:text-4xl font-bold text-foreground">Portfolio</h1>
 
         <p className="text-muted-foreground mt-2">
 
-          Your digital asset portfolio overview
+          Sizning raqamli aktivlaringiz va ularning qiymati
 
         </p>
 
       </div>
 
 
-      {/* Stats Grid */}
+      {loading ? (
 
-      <div className="grid grid-cols-1 @md:grid-cols-2 xl:grid-cols-4 gap-4 xl:gap-6">
+        <div className="space-y-4">
 
-        {stats.map((stat) => (
+          <div className="grid grid-cols-1 @md:grid-cols-2 gap-4">
 
-          <Card key={stat.title} className="border-border bg-card card-glow-hover">
+            <Skeleton className="h-32 w-full bg-muted" />
 
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <Skeleton className="h-32 w-full bg-muted" />
 
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+          </div>
 
-                {stat.title}
+          <Skeleton className="h-64 w-full bg-muted" />
+
+        </div>
+
+      ) : (
+
+        <>
+
+          {/* Portfolio Summary */}
+
+          <div className="grid grid-cols-1 @md:grid-cols-2 gap-4">
+
+            <Card className="border-border bg-gradient-to-br from-primary/10 to-primary/5">
+
+              <CardHeader className="pb-3">
+
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+
+                  <TrendingUp className="h-4 w-4" />
+
+                  Jami qiymat (USDT)
+
+                </CardTitle>
+
+              </CardHeader>
+
+              <CardContent>
+
+                <p className="text-3xl xl:text-4xl font-bold text-primary">
+
+                  ${getTotalPortfolioValue().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+
+                </p>
+
+                <p className="text-sm text-muted-foreground mt-2">
+
+                  Real vaqtda yangilanadi
+
+                </p>
+
+              </CardContent>
+
+            </Card>
+
+
+            <Card className="border-border bg-gradient-to-br from-secondary/10 to-secondary/5">
+
+              <CardHeader className="pb-3">
+
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+
+                  <TrendingUp className="h-4 w-4" />
+
+                  Jami qiymat (KGS)
+
+                </CardTitle>
+
+              </CardHeader>
+
+              <CardContent>
+
+                <p className="text-3xl xl:text-4xl font-bold text-foreground">
+
+                  {(getTotalPortfolioValue() * 87).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} сом
+
+                </p>
+
+                <p className="text-sm text-muted-foreground mt-2">
+
+                  1 USDT = 87 KGS
+
+                </p>
+
+              </CardContent>
+
+            </Card>
+
+          </div>
+
+
+          {/* Assets List */}
+
+          <Card className="border-border bg-card">
+
+            <CardHeader>
+
+              <CardTitle className="text-xl font-bold flex items-center gap-2">
+
+                <Wallet className="h-5 w-5" />
+
+                Aktivlar ({assets.length})
 
               </CardTitle>
-
-              <stat.icon className={`h-5 w-5 ${stat.color}`} />
 
             </CardHeader>
 
             <CardContent>
 
-              {loading ? (
+              {assets.length === 0 ? (
 
-                <Skeleton className="h-8 w-24 bg-muted" />
+                <div className="text-center py-12">
+
+                  <Wallet className="mx-auto h-16 w-16 text-muted-foreground mb-4 opacity-50" />
+
+                  <p className="text-muted-foreground mb-2">Aktivlar mavjud emas</p>
+
+                  <p className="text-sm text-muted-foreground">
+
+                    Admin tomonidan sizga aktivlar tayinlanmagan
+
+                  </p>
+
+                </div>
 
               ) : (
 
-                <div className="text-2xl xl:text-3xl font-bold text-foreground">
+                <div className="space-y-3">
 
-                  {stat.value}
+                  {assets.map((asset) => {
+
+                    const token = getTokenInfo(asset.token_symbol);
+
+                    const price = getTokenPrice(asset.token_symbol);
+
+                    const value = calculateValue(asset.amount, asset.token_symbol);
+
+                    const valueKGS = value * 87;
+
+
+                    return (
+
+                      <div
+
+                        key={asset.id}
+
+                        className="flex flex-col @md:flex-row @md:items-center justify-between gap-4 p-4 rounded-lg bg-secondary/50 border border-border hover:bg-secondary/70 transition-colors"
+
+                      >
+
+                        <div className="flex items-center gap-4 flex-1">
+
+                          {token?.logo_url ? (
+
+                            <img
+
+                              src={token.logo_url}
+
+                              alt={token.name}
+
+                              className="w-12 h-12 rounded-full"
+
+                              onError={(e) => {
+
+                                e.currentTarget.style.display = 'none';
+
+                              }}
+
+                            />
+
+                          ) : (
+
+                            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+
+                              <span className="text-lg font-bold text-primary">
+
+                                {asset.token_symbol.charAt(0)}
+
+                              </span>
+
+                            </div>
+
+                          )}
+
+                          <div className="flex-1">
+
+                            <h3 className="font-bold text-foreground text-lg">
+
+                              {asset.token_symbol}
+
+                            </h3>
+
+                            <p className="text-sm text-muted-foreground">
+
+                              {token?.name || asset.token_symbol}
+
+                            </p>
+
+                            <p className="text-xs text-muted-foreground mt-1">
+
+                              ${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / {asset.token_symbol}
+
+                            </p>
+
+                          </div>
+
+                        </div>
+
+
+                        <div className="text-right">
+
+                          <p className="font-bold text-foreground text-lg">
+
+                            {(typeof asset.amount === 'string' ? parseFloat(asset.amount) : asset.amount).toLocaleString('en-US', { 
+
+                              minimumFractionDigits: 2, 
+
+                              maximumFractionDigits: (typeof asset.amount === 'string' ? parseFloat(asset.amount) : asset.amount) < 1 ? 8 : 2 
+
+                            })} {asset.token_symbol}
+
+                          </p>
+
+                          <p className="text-sm text-primary font-semibold">
+
+                            ${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+
+                          </p>
+
+                          <p className="text-xs text-muted-foreground">
+
+                            {valueKGS.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} сом
+
+                          </p>
+
+                        </div>
+
+                      </div>
+
+                    );
+
+                  })}
 
                 </div>
 
@@ -258,78 +406,28 @@ export default function HolderDashboardPage() {
 
           </Card>
 
-        ))}
 
-      </div>
+          {/* Price Update Info */}
 
+          <Card className="border-border bg-card">
 
-      {/* Quick Actions */}
+            <CardContent className="py-4">
 
-      <Card className="border-border bg-card">
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
 
-        <CardHeader>
+                <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
 
-          <CardTitle className="text-xl font-bold">Quick Actions</CardTitle>
+                <span>Narxlar har soniyada yangilanadi</span>
 
-        </CardHeader>
+              </div>
 
-        <CardContent>
+            </CardContent>
 
-          <div className="grid grid-cols-1 @md:grid-cols-3 gap-4">
+          </Card>
 
-            <a
+        </>
 
-              href="/holder/portfolio"
-
-              className="p-4 rounded-lg bg-secondary/50 hover:bg-accent transition-colors text-center"
-
-            >
-
-              <Wallet className="h-8 w-8 mx-auto mb-2 text-primary" />
-
-              <p className="font-semibold text-foreground">View Portfolio</p>
-
-              <p className="text-sm text-muted-foreground mt-1">See all your assets</p>
-
-            </a>
-
-            <a
-
-              href="/holder/transactions"
-
-              className="p-4 rounded-lg bg-secondary/50 hover:bg-accent transition-colors text-center"
-
-            >
-
-              <TrendingUp className="h-8 w-8 mx-auto mb-2 text-primary" />
-
-              <p className="font-semibold text-foreground">New Transaction</p>
-
-              <p className="text-sm text-muted-foreground mt-1">Swap, buy, or sell</p>
-
-            </a>
-
-            <a
-
-              href="/holder/history"
-
-              className="p-4 rounded-lg bg-secondary/50 hover:bg-accent transition-colors text-center"
-
-            >
-
-              <Clock className="h-8 w-8 mx-auto mb-2 text-primary" />
-
-              <p className="font-semibold text-foreground">View History</p>
-
-              <p className="text-sm text-muted-foreground mt-1">Transaction history</p>
-
-            </a>
-
-          </div>
-
-        </CardContent>
-
-      </Card>
+      )}
 
     </div>
 
