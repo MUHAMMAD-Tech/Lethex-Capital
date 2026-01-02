@@ -1,8 +1,9 @@
 // LETHEX Holder Layout Component
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { useAuth } from '@/contexts/AuthContext';
 import { useAppStore } from '@/store/appStore';
 import { useI18n } from '@/contexts/I18nContext';
 import { Header } from '@/components/common/Header';
@@ -15,14 +16,36 @@ import {
   LogOut,
   LayoutDashboard,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export function HolderLayout() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { profile, user, loading, signOut } = useAuth();
   const { currentHolder, clearCurrentHolder } = useAppStore();
   const { t } = useI18n();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Role tekshiruvi
+  useEffect(() => {
+    if (!loading && (!user || !profile || profile.role !== 'holder')) {
+      console.log('Holder emas, login sahifasiga yo\'naltirilmoqda');
+      navigate('/login', { replace: true });
+    }
+  }, [user, profile, loading, navigate]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // Agar holder bo'lmasa, login sahifasiga yo'naltir
+  if (!user || !profile || profile.role !== 'holder') {
+    return <Navigate to="/login" replace />;
+  }
 
   const navigation = [
     { name: t('admin.dashboard'), href: '/holder/dashboard', icon: LayoutDashboard },
@@ -31,9 +54,12 @@ export function HolderLayout() {
     { name: t('admin.history'), href: '/holder/history', icon: History },
   ];
 
-  const handleExit = () => {
+  const handleExit = async () => {
+    // Supabase'dan signOut qilish
+    await signOut();
+    // AppStore'dan holder ma'lumotlarini tozalash
     clearCurrentHolder();
-    toast.success(t('auth.loginSuccess'));
+    toast.success(t('auth.logoutSuccess'));
     navigate('/login');
   };
 
@@ -81,7 +107,10 @@ export function HolderLayout() {
             <div className="mb-3 px-4 py-2 bg-secondary/50 rounded-lg">
               <p className="text-xs text-muted-foreground">{t('auth.login')}</p>
               <p className="text-sm font-semibold text-foreground truncate">
-                {currentHolder?.name || 'Holder'}
+                {currentHolder?.name || profile?.full_name || 'Holder'}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {profile?.username || user?.email}
               </p>
             </div>
             <Button
@@ -114,39 +143,42 @@ export function HolderLayout() {
                   <Menu className="h-6 w-6" />
                 </Button>
               </SheetTrigger>
-            <SheetContent side="left" className="w-64 p-0">
-              <div className="flex flex-col h-full">
-                {/* Logo */}
-                <div className="p-6 border-b border-border">
-                  <h1 className="text-2xl font-bold gradient-text">LETHEX</h1>
-                  <p className="text-xs text-muted-foreground mt-1">Fund Dashboard</p>
-                </div>
-
-                {/* Navigation */}
-                <nav className="flex-1 p-4 space-y-2">
-                  <NavLinks />
-                </nav>
-
-                {/* User Info & Exit */}
-                <div className="p-4 border-t border-border">
-                  <div className="mb-3 px-4 py-2 bg-secondary/50 rounded-lg">
-                    <p className="text-xs text-muted-foreground">Logged in as</p>
-                    <p className="text-sm font-semibold text-foreground truncate">
-                      {currentHolder?.name || 'Holder'}
-                    </p>
+              <SheetContent side="left" className="w-64 p-0">
+                <div className="flex flex-col h-full">
+                  {/* Logo */}
+                  <div className="p-6 border-b border-border">
+                    <h1 className="text-2xl font-bold gradient-text">LETHEX</h1>
+                    <p className="text-xs text-muted-foreground mt-1">Fund Dashboard</p>
                   </div>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={handleExit}
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    {t('common.exit')}
-                  </Button>
+
+                  {/* Navigation */}
+                  <nav className="flex-1 p-4 space-y-2">
+                    <NavLinks />
+                  </nav>
+
+                  {/* User Info & Exit */}
+                  <div className="p-4 border-t border-border">
+                    <div className="mb-3 px-4 py-2 bg-secondary/50 rounded-lg">
+                      <p className="text-xs text-muted-foreground">{t('auth.login')}</p>
+                      <p className="text-sm font-semibold text-foreground truncate">
+                        {currentHolder?.name || profile?.full_name || 'Holder'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {profile?.username || user?.email}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={handleExit}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      {t('common.exit')}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </SheetContent>
-          </Sheet>
+              </SheetContent>
+            </Sheet>
           </div>
         </header>
 
