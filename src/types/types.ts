@@ -1,13 +1,18 @@
-// LETHEX Type Definitions
+// src/types/types.ts - TO'LIQ FAYL
 
-export type UserRole = 'admin' | 'holder';
+export type UserRole = 'admin' | 'holder' | 'user';
 export type TransactionType = 'swap' | 'buy' | 'sell';
 export type TransactionStatus = 'pending' | 'approved' | 'rejected';
 
+// Profile interfeysi (birlashtirilgan)
 export interface Profile {
   id: string;
-  email: string | null;
+  username: string;
+  email?: string | null;
+  full_name?: string;
   role: UserRole;
+  access_code?: string;
+  wallet_address?: string;
   created_at: string;
   updated_at: string;
 }
@@ -130,17 +135,6 @@ export interface SellFormData {
   token: string;
   amount: string;
   notes?: string;
-}
-// src/types/types.ts
-export interface Profile {
-  id: string;
-  username: string;
-  full_name?: string;
-  role: 'admin' | 'holder' | 'user'; // BU QATORNI QO'SHING
-  access_code?: string;
-  wallet_address?: string;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface HolderFormData {
