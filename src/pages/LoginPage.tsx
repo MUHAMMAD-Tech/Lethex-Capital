@@ -1,179 +1,177 @@
-// src/pages/LoginPage.tsx - handleLogin funksiyasini qayta yozamiz
-const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault();
+// LETHEX Login Page - Unified Access Code System
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'motion/react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/contexts/AuthContext';
+import { useAppStore } from '@/store/appStore';
+import { verifyAdminAccessCode, getHolderByAccessCode } from '@/db/api';
+import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 
-  if (!accessCode.trim()) {
-    toast.error('Iltimos, kirish kodini kiriting');
-    return;
-  }
+export default function LoginPage() {
+  const [accessCode, setAccessCode] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const { signIn, signUp } = useAuth();
+  const { setCurrentHolder } = useAppStore();
 
-  setLoading(true);
-  console.log('Login boshlandi, access code:', accessCode);
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  try {
-    // Step 1: Admin access code ni tekshirish
-    const isAdmin = await verifyAdminAccessCode(accessCode);
-    console.log('Admin tekshiruvi natijasi:', isAdmin);
-    
-    if (isAdmin) {
-      console.log('Admin access code topildi, admin sifatida kirish...');
+    if (!accessCode.trim()) {
+      toast.error('Iltimos, kirish kodini kiriting');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      console.log('Kirish kodi tekshirilmoqda:', accessCode);
       
-      // Admin uchun kirish
-      const adminUsername = 'admin';
-      
-      // Avval SignIn urinib ko'rish
-      const { error: signInError } = await signIn(adminUsername, accessCode);
+      // Step 1: Check if it's the admin access code
+      const isAdmin = await verifyAdminAccessCode(accessCode);
+      console.log('Admin tekshiruvi natijasi:', isAdmin);
 
-      if (signInError) {
-        console.log('Admin SignIn xatosi, SignUp urinilmoqda:', signInError.message);
+      if (isAdmin) {
+        console.log('Admin sifatida kirish...');
+        // Admin login - use Supabase Auth
+        // For admin, we'll use a fixed username "admin" with the access code as password
+        let authSuccess = false;
         
-        // Agar signIn xato bersa, signUp qilish
-        const { error: signUpError } = await signUp(adminUsername, accessCode);
-        
-        if (signUpError) {
-          console.error('Admin SignUp xatosi:', signUpError.message);
-          toast.error('Admin yaratishda xatolik');
+        // Try to sign in first
+        const { error: signInError } = await signIn('admin', accessCode);
+
+        if (signInError) {
+          console.log('SignIn xatosi, SignUp urinilmoqda:', signInError.message);
+          // If sign in fails, try to sign up (first time admin)
+          const { error: signUpError } = await signUp('admin', accessCode);
+          
+          if (!signUpError) {
+            console.log('SignUp muvaffaqiyatli');
+            authSuccess = true;
+          } else {
+            console.error('SignUp xatosi:', signUpError.message);
+          }
+        } else {
+          console.log('SignIn muvaffaqiyatli');
+          authSuccess = true;
+        }
+
+        if (authSuccess) {
+          toast.success('Xush kelibsiz, Admin!');
+          navigate('/admin/dashboard');
+          return;
+        } else {
+          toast.error('Admin autentifikatsiyasi muvaffaqiyatsiz');
           setLoading(false);
           return;
         }
-        
-        console.log('Yangi admin SignUp qilindi');
-        
-        // Kichik kutish, keyin role ni o'rnatish
-        setTimeout(async () => {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            try {
-              await updateProfileRole(user.id, 'admin');
-              console.log('Admin role o\'rnatildi');
-              
-              // Biroz kutish va refresh
-              setTimeout(async () => {
-                await refreshProfile();
-                toast.success('Xush kelibsiz, Admin!');
-                navigate('/admin/dashboard');
-              }, 500);
-            } catch (roleError) {
-              console.error('Admin role o\'rnatish xatosi:', roleError);
-              toast.error('Role o\'rnatishda xatolik');
-              setLoading(false);
-            }
-          }
-        }, 1000);
-        
-        return;
-      } else {
-        console.log('Mavjud admin SignIn qilindi');
-        
-        // Mavjud adminning role ni tekshirish va yangilash
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          try {
-            await updateProfileRole(user.id, 'admin');
-            console.log('Admin role yangilandi');
-            
-            // Profile ni refresh qilish
-            await refreshProfile();
-            
-            toast.success('Xush kelibsiz, Admin!');
-            navigate('/admin/dashboard');
-            return;
-          } catch (roleError) {
-            console.error('Admin role yangilash xatosi:', roleError);
-          }
-        }
       }
-    }
 
-    // Step 2: Holder access code ni tekshirish
-    console.log('Holder access code ni tekshirilmoqda...');
-    const holder = await getHolderByAccessCode(accessCode);
-    console.log('Holder tekshiruvi natijasi:', holder);
-    
-    if (holder) {
-      console.log('Holder topildi:', holder.name);
-      
-      // Holder uchun username
-      const holderUsername = holder.username || `holder_${holder.id.slice(0, 8)}`;
-      console.log('Holder username:', holderUsername);
+      console.log('Holder sifatida tekshirilmoqda...');
+      // Step 2: Check if it's a holder access code
+      const holder = await getHolderByAccessCode(accessCode);
+      console.log('Holder topildi:', holder);
 
-      // Holder SignIn urinib ko'rish
-      const { error: holderSignInError } = await signIn(holderUsername, accessCode);
-
-      if (holderSignInError) {
-        console.log('Holder SignIn xatosi, SignUp urinilmoqda:', holderSignInError.message);
-        
-        // Holder SignUp qilish
-        const { error: holderSignUpError } = await signUp(holderUsername, accessCode);
-        
-        if (holderSignUpError) {
-          console.error('Holder SignUp xatosi:', holderSignUpError.message);
-          toast.error('Holder yaratishda xatolik');
-          setLoading(false);
-          return;
-        }
-        
-        console.log('Yangi holder SignUp qilindi');
-        
-        // Kichik kutish, keyin role ni o'rnatish
-        setTimeout(async () => {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            try {
-              await updateProfileRole(user.id, 'holder');
-              console.log('Holder role o\'rnatildi');
-              
-              // Holder ma'lumotlarini saqlash
-              setCurrentHolder(holder);
-              
-              // Biroz kutish va refresh
-              setTimeout(async () => {
-                await refreshProfile();
-                toast.success(`Xush kelibsiz, ${holder.name}!`);
-                navigate('/holder/dashboard');
-              }, 500);
-            } catch (roleError) {
-              console.error('Holder role o\'rnatish xatosi:', roleError);
-              toast.error('Holder role o\'rnatishda xatolik');
-              setLoading(false);
-            }
-          }
-        }, 1000);
-        
+      if (holder) {
+        // Holder login - store in session
+        setCurrentHolder(holder);
+        toast.success(`Xush kelibsiz, ${holder.name}!`);
+        navigate('/holder/dashboard');
         return;
-      } else {
-        console.log('Mavjud holder SignIn qilindi');
-        
-        // Mavjud holderni role ni tekshirish va yangilash
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          try {
-            await updateProfileRole(user.id, 'holder');
-            console.log('Holder role yangilandi');
-            
-            // Holder ma'lumotlarini saqlash
-            setCurrentHolder(holder);
-            
-            // Profile ni refresh qilish
-            await refreshProfile();
-            
-            toast.success(`Xush kelibsiz, ${holder.name}!`);
-            navigate('/holder/dashboard');
-            return;
-          } catch (roleError) {
-            console.error('Holder role yangilash xatosi:', roleError);
-          }
-        }
       }
-    }
 
-    // Step 3: Noto'g'ri access code
-    console.log('Kirish kodi topilmadi');
-    toast.error('Noto\'g\'ri kirish kodi');
-  } catch (error) {
-    console.error('Login xatosi:', error);
-    toast.error('Kirish paytida xatolik yuz berdi');
-  } finally {
-    setLoading(false);
-  }
-};
+      // Step 3: Invalid access code
+      console.log('Kirish kodi topilmadi');
+      toast.error('Noto\'g\'ri kirish kodi');
+    } catch (error) {
+      console.error('Login xatosi:', error);
+      toast.error('Kirish paytida xatolik yuz berdi');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md"
+      >
+        <Card className="border-border bg-card card-glow">
+          <CardHeader className="space-y-4 text-center">
+            <div className="mx-auto w-24 h-24 flex items-center justify-center">
+              <img 
+                src="/lethex-logo.png" 
+                alt="LETHEX Logo" 
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <CardTitle className="text-3xl font-bold gradient-text">
+              LETHEX
+            </CardTitle>
+            <CardDescription className="text-base">
+              Raqamli aktivlar fondini boshqarish tizimi
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-6">
+              <div className="space-y-2">
+                <label htmlFor="accessCode" className="text-sm font-medium text-foreground">
+                  Kirish kodi
+                </label>
+                <Input
+                  id="accessCode"
+                  type="password"
+                  placeholder="Kirish kodingizni kiriting"
+                  value={accessCode}
+                  onChange={(e) => setAccessCode(e.target.value)}
+                  disabled={loading}
+                  className="h-12 text-base"
+                  autoFocus
+                />
+                <p className="text-xs text-muted-foreground">
+                  Davom etish uchun admin yoki holder kirish kodini kiriting
+                </p>
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full h-12 text-base font-semibold"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Tekshirilmoqda...
+                  </>
+                ) : (
+                  'Tizimga kirish'
+                )}
+              </Button>
+            </form>
+
+            <div className="mt-6 text-center text-xs text-muted-foreground">
+              <p>Xavfsiz kirish • Real vaqtda kuzatish • Qo'lda tasdiqlash</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+          className="mt-6 text-center text-sm text-muted-foreground"
+        >
+          <p>© 2025 LETHEX. Barcha huquqlar himoyalangan.</p>
+        </motion.div>
+      </motion.div>
+    </div>
+  );
+}
