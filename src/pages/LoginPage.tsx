@@ -1,4 +1,3 @@
-// LETHEX Login Page - Unified Access Code System
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
@@ -7,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppStore } from '@/store/appStore';
+import { supabase } from '@/db/supabase';
 import { verifyAdminAccessCode, getHolderByAccessCode } from '@/db/api';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
@@ -15,7 +15,7 @@ export default function LoginPage() {
   const [accessCode, setAccessCode] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, updateProfileRole } = useAuth();
   const { setCurrentHolder } = useAppStore();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -30,61 +30,124 @@ export default function LoginPage() {
 
     try {
       console.log('Kirish kodi tekshirilmoqda:', accessCode);
-      
-      // Step 1: Check if it's the admin access code
+
+      // Step 1: Admin access code ni tekshirish
       const isAdmin = await verifyAdminAccessCode(accessCode);
       console.log('Admin tekshiruvi natijasi:', isAdmin);
 
       if (isAdmin) {
         console.log('Admin sifatida kirish...');
-        // Admin login - use Supabase Auth
-        // For admin, we'll use a fixed username "admin" with the access code as password
-        let authSuccess = false;
         
-        // Try to sign in first
-        const { error: signInError } = await signIn('admin', accessCode);
+        // Admin login yoki register
+        let authSuccess = false;
+        const adminUsername = 'admin';
+
+        // Avval signIn urinib ko'rish
+        const { error: signInError } = await signIn(adminUsername, accessCode);
 
         if (signInError) {
           console.log('SignIn xatosi, SignUp urinilmoqda:', signInError.message);
-          // If sign in fails, try to sign up (first time admin)
-          const { error: signUpError } = await signUp('admin', accessCode);
           
-          if (!signUpError) {
-            console.log('SignUp muvaffaqiyatli');
-            authSuccess = true;
-          } else {
+          // Agar signIn xato bersa, signUp qilish
+          const { error: signUpError } = await signUp(adminUsername, accessCode);
+
+          if (signUpError) {
             console.error('SignUp xatosi:', signUpError.message);
+            toast.error('Admin yaratishda xatolik');
+            setLoading(false);
+            return;
+          } else {
+            console.log('Admin SignUp muvaffaqiyatli');
+            
+            // Yangi admin yaratilganda role ni o'rnatish
+            // Bir oz kutish kerak, chunki profile avtomatik yaratiladi
+            setTimeout(async () => {
+              const { data: { user } } = await supabase.auth.getUser();
+              if (user) {
+                await updateProfileRole(user.id, 'admin');
+              }
+            }, 1000);
+            
+            authSuccess = true;
           }
         } else {
-          console.log('SignIn muvaffaqiyatli');
+          console.log('Admin SignIn muvaffaqiyatli');
           authSuccess = true;
+          
+          // Mavjud adminning role ni tekshirish va yangilash
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            await updateProfileRole(user.id, 'admin');
+          }
         }
 
         if (authSuccess) {
           toast.success('Xush kelibsiz, Admin!');
           navigate('/admin/dashboard');
           return;
-        } else {
-          toast.error('Admin autentifikatsiyasi muvaffaqiyatsiz');
-          setLoading(false);
-          return;
         }
       }
 
+      // Step 2: Holder access code ni tekshirish
       console.log('Holder sifatida tekshirilmoqda...');
-      // Step 2: Check if it's a holder access code
       const holder = await getHolderByAccessCode(accessCode);
       console.log('Holder topildi:', holder);
 
       if (holder) {
-        // Holder login - store in session
-        setCurrentHolder(holder);
-        toast.success(`Xush kelibsiz, ${holder.name}!`);
-        navigate('/holder/dashboard');
-        return;
+        // Holder uchun username olish
+        const holderUsername = holder.username || `holder_${holder.id.slice(0, 8)}`;
+        
+        // Holder login yoki register
+        let holderAuthSuccess = false;
+
+        // SignIn urinib ko'rish
+        const { error: holderSignInError } = await signIn(holderUsername, accessCode);
+
+        if (holderSignInError) {
+          console.log('Holder SignIn xatosi, SignUp urinilmoqda:', holderSignInError.message);
+          
+          // Agar signIn xato bersa, signUp qilish
+          const { error: holderSignUpError } = await signUp(holderUsername, accessCode);
+
+          if (holderSignUpError) {
+            console.error('Holder SignUp xatosi:', holderSignUpError.message);
+            toast.error('Holder yaratishda xatolik');
+            setLoading(false);
+            return;
+          } else {
+            console.log('Holder SignUp muvaffaqiyatli');
+            
+            // Yangi holder yaratilganda role ni o'rnatish
+            setTimeout(async () => {
+              const { data: { user } } = await supabase.auth.getUser();
+              if (user) {
+                await updateProfileRole(user.id, 'holder');
+              }
+            }, 1000);
+            
+            holderAuthSuccess = true;
+          }
+        } else {
+          console.log('Holder SignIn muvaffaqiyatli');
+          holderAuthSuccess = true;
+          
+          // Mavjud holderni role ni tekshirish va yangilash
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            await updateProfileRole(user.id, 'holder');
+          }
+        }
+
+        if (holderAuthSuccess) {
+          // Holder ma'lumotlarini store ga saqlash
+          setCurrentHolder(holder);
+          toast.success(`Xush kelibsiz, ${holder.name}!`);
+          navigate('/holder/dashboard');
+          return;
+        }
       }
 
-      // Step 3: Invalid access code
+      // Step 3: Noto'g'ri access code
       console.log('Kirish kodi topilmadi');
       toast.error('Noto\'g\'ri kirish kodi');
     } catch (error) {
@@ -128,7 +191,7 @@ export default function LoginPage() {
                 </label>
                 <Input
                   id="accessCode"
-                  type="password"
+                  type="text"
                   placeholder="Kirish kodingizni kiriting"
                   value={accessCode}
                   onChange={(e) => setAccessCode(e.target.value)}
