@@ -25,6 +25,7 @@ interface AuthContextType {
   signUp: (username: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  updateProfileRole: (userId: string, role: 'admin' | 'holder' | 'user') => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -42,6 +43,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const profileData = await getProfile(user.id);
     setProfile(profileData);
+  };
+
+  // Yangi funksiya: Profile role ni yangilash
+  const updateProfileRole = async (userId: string, role: 'admin' | 'holder' | 'user') => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role })
+        .eq('id', userId);
+
+      if (error) {
+        console.error('Role yangilash xatosi:', error);
+        throw error;
+      }
+      
+      // Profile ni yangilash
+      await refreshProfile();
+      console.log(`Role yangilandi: ${userId} -> ${role}`);
+    } catch (error) {
+      console.error('Role yangilash xatosi:', error);
+      throw error;
+    }
   };
 
   useEffect(() => {
@@ -103,7 +126,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      profile, 
+      loading, 
+      signIn, 
+      signUp, 
+      signOut, 
+      refreshProfile,
+      updateProfileRole 
+    }}>
       {children}
     </AuthContext.Provider>
   );
