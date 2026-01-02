@@ -1,4 +1,3 @@
-// src/components/common/RouteGuard.tsx
 import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,8 +10,8 @@ interface RouteGuardProps {
 const PUBLIC_ROUTES = ['/login', '/403', '/404'];
 
 // Role-based yo'l patternlari
-const ADMIN_ROUTES = ['/admin/*'];
-const HOLDER_ROUTES = ['/holder/*'];
+const ADMIN_ROUTES = ['/admin', '/admin/*'];
+const HOLDER_ROUTES = ['/holder', '/holder/*'];
 
 function patternMosKeladimi(path: string, patterns: string[]) {
   return patterns.some(pattern => {
@@ -20,7 +19,7 @@ function patternMosKeladimi(path: string, patterns: string[]) {
       const regex = new RegExp('^' + pattern.replace('*', '.*') + '$');
       return regex.test(path);
     }
-    return path === pattern;
+    return path.startsWith(pattern);
   });
 }
 
@@ -37,8 +36,9 @@ export function RouteGuard({ children }: RouteGuardProps) {
 
     // Agar foydalanuvchi login qilmagan bo'lsa va yo'l public bo'lmasa
     if (!user && !publicYoilmi) {
+      console.log('Login qilmagan foydalanuvchi, login sahifasiga yo\'naltirilmoqda');
       navigate('/login', { 
-        state: { from: location.pathname }, 
+        state: { from: currentPath }, 
         replace: true 
       });
       return;
@@ -46,12 +46,17 @@ export function RouteGuard({ children }: RouteGuardProps) {
 
     // Agar foydalanuvchi login qilgan bo'lsa
     if (user && profile) {
-      // Agar login sahifasida bo'lsa, dashboardga yo'naltir
-      if (currentPath === '/login') {
+      console.log('Foydalanuvchi login qilgan:', profile.role);
+      console.log('Joriy yo\'l:', currentPath);
+
+      // Agar login sahifasida bo'lsa, role bo'yicha dashboardga yo'naltir
+      if (currentPath === '/login' || currentPath === '/') {
         if (profile.role === 'admin') {
           navigate('/admin/dashboard', { replace: true });
         } else if (profile.role === 'holder') {
           navigate('/holder/dashboard', { replace: true });
+        } else {
+          navigate('/login', { replace: true });
         }
         return;
       }
@@ -60,24 +65,37 @@ export function RouteGuard({ children }: RouteGuardProps) {
       const adminYoilmi = patternMosKeladimi(currentPath, ADMIN_ROUTES);
       const holderYoilmi = patternMosKeladimi(currentPath, HOLDER_ROUTES);
 
-      if (adminYoilmi && profile.role !== 'admin') {
-        // Admin yo'lida, lekin admin emas
-        if (profile.role === 'holder') {
-          navigate('/holder/dashboard', { replace: true });
-        } else {
-          navigate('/login', { replace: true });
+      if (adminYoilmi) {
+        if (profile.role !== 'admin') {
+          console.log('Admin yo\'lida, lekin admin emas. Role:', profile.role);
+          if (profile.role === 'holder') {
+            navigate('/holder/dashboard', { replace: true });
+          } else {
+            navigate('/login', { replace: true });
+          }
+          return;
         }
-        return;
       }
 
-      if (holderYoilmi && profile.role !== 'holder') {
-        // Holder yo'lida, lekin holder emas
+      if (holderYoilmi) {
+        if (profile.role !== 'holder') {
+          console.log('Holder yo\'lida, lekin holder emas. Role:', profile.role);
+          if (profile.role === 'admin') {
+            navigate('/admin/dashboard', { replace: true });
+          } else {
+            navigate('/login', { replace: true });
+          }
+          return;
+        }
+      }
+
+      // Agar hech qanday maxsus yo'lda bo'lmasa va role mavjud bo'lsa
+      if (!adminYoilmi && !holderYoilmi && profile.role) {
         if (profile.role === 'admin') {
           navigate('/admin/dashboard', { replace: true });
-        } else {
-          navigate('/login', { replace: true });
+        } else if (profile.role === 'holder') {
+          navigate('/holder/dashboard', { replace: true });
         }
-        return;
       }
     }
   }, [user, profile, loading, location.pathname, navigate]);
