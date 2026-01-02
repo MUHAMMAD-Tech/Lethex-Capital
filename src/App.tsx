@@ -14,11 +14,11 @@ import { useAppStore } from '@/store/appStore';
 import { AdminLayout } from '@/components/layouts/AdminLayout';
 import { HolderLayout } from '@/components/layouts/HolderLayout';
 
-// Pages
+// Public Pages
 import LoginPage from '@/pages/LoginPage';
 import NotFound from '@/pages/NotFound';
 
-// Admin pages
+// Admin Pages
 import AdminDashboardPage from '@/pages/admin/AdminDashboardPage';
 import AdminSettingsPage from '@/pages/admin/AdminSettingsPage';
 import AdminHoldersPage from '@/pages/admin/AdminHoldersPage';
@@ -28,7 +28,7 @@ import AdminApprovalsPage from '@/pages/admin/AdminApprovalsPage';
 import AdminHistoryPage from '@/pages/admin/AdminHistoryPage';
 import AdminCommissionsPage from '@/pages/admin/AdminCommissionsPage';
 
-// Holder pages
+// Holder Pages
 import HolderDashboardPage from '@/pages/holder/HolderDashboardPage';
 import HolderPortfolioPage from '@/pages/holder/HolderPortfolioPage';
 import HolderTransactionsPage from '@/pages/holder/HolderTransactionsPage';
@@ -38,6 +38,7 @@ const App: React.FC = () => {
   const { loadTokens, updatePrices } = useAppStore();
 
   useEffect(() => {
+    // Load tokens on app start
     loadTokens();
     updatePrices();
 
@@ -54,13 +55,14 @@ const App: React.FC = () => {
         <Router>
           <AuthProvider>
             <RouteGuard>
+              {/* Observer for scroll/animations */}
               <IntersectObserver />
 
               <Routes>
-                {/* PUBLIC */}
+                {/* PUBLIC ROUTES */}
                 <Route path="/login" element={<LoginPage />} />
 
-                {/* ADMIN */}
+                {/* ADMIN ROUTES */}
                 <Route
                   path="/admin"
                   element={
@@ -79,7 +81,7 @@ const App: React.FC = () => {
                   <Route path="commissions" element={<AdminCommissionsPage />} />
                 </Route>
 
-                {/* HOLDER */}
+                {/* HOLDER ROUTES */}
                 <Route
                   path="/holder"
                   element={
@@ -94,10 +96,11 @@ const App: React.FC = () => {
                   <Route path="history" element={<HolderHistoryPage />} />
                 </Route>
 
-                {/* FALLBACK */}
+                {/* FALLBACK 404 */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
 
+              {/* Toast Notifications */}
               <Toaster position="top-right" richColors />
             </RouteGuard>
           </AuthProvider>
