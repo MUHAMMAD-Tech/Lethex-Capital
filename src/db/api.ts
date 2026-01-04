@@ -278,6 +278,8 @@ export { generateAccessCode };
 // ============================================================================
 
 export async function getAssetsByHolderId(holderId: string): Promise<AssetWithToken[]> {
+  console.log('🔍 getAssetsByHolderId called with:', holderId);
+  
   const { data, error } = await supabase
     .from('assets')
     .select(`
@@ -288,9 +290,21 @@ export async function getAssetsByHolderId(holderId: string): Promise<AssetWithTo
     .order('token_symbol', { ascending: true });
 
   if (error) {
-    console.error('Error fetching assets:', error);
+    console.error('❌ Error fetching assets:', error);
+    console.error('Error details:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code
+    });
     return [];
   }
+  
+  console.log(`✅ Assets fetched successfully: ${data?.length || 0} assets`);
+  if (data && data.length > 0) {
+    console.log('Assets data:', data);
+  }
+  
   return Array.isArray(data) ? data : [];
 }
 
@@ -362,6 +376,8 @@ export async function deleteAsset(holderId: string, tokenSymbol: string): Promis
 
 // Wrapper functions for simplified API
 export async function getAssetsByHolder(holderId: string): Promise<Asset[]> {
+  console.log('🔍 getAssetsByHolder called with:', holderId);
+  
   const { data, error } = await supabase
     .from('assets')
     .select('*')
@@ -369,9 +385,21 @@ export async function getAssetsByHolder(holderId: string): Promise<Asset[]> {
     .order('token_symbol', { ascending: true });
 
   if (error) {
-    console.error('Error fetching assets:', error);
+    console.error('❌ Error fetching assets:', error);
+    console.error('Error details:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code
+    });
     return [];
   }
+  
+  console.log(`✅ Assets fetched successfully: ${data?.length || 0} assets`);
+  if (data && data.length > 0) {
+    console.log('Assets data:', data);
+  }
+  
   return Array.isArray(data) ? data : [];
 }
 
@@ -1189,4 +1217,90 @@ export async function getTransactionById(transactionId: string): Promise<Transac
     return null;
   }
   return data;
+}
+
+// ============================================================================
+// HELPER FUNCTIONS - Tekshirish va Debug
+// ============================================================================
+
+/**
+ * Holder mavjudligini tekshirish
+ * @param holderId - Holder UUID
+ * @returns true agar holder mavjud bo'lsa
+ */
+export async function checkHolderExists(holderId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('holders')
+    .select('id, name, access_code')
+    .eq('id', holderId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Holder tekshirishda xatolik:', error);
+    return false;
+  }
+
+  if (data) {
+    console.log('✅ Holder topildi:', data);
+    return true;
+  } else {
+    console.log('❌ Holder topilmadi');
+    return false;
+  }
+}
+
+/**
+ * Holder assetlarini tekshirish (oddiy)
+ * @param holderId - Holder UUID
+ * @returns Assets array
+ */
+export async function checkHolderAssets(holderId: string): Promise<Asset[]> {
+  const { data, error } = await supabase
+    .from('assets')
+    .select('*')
+    .eq('holder_id', holderId)
+    .order('token_symbol', { ascending: true });
+
+  if (error) {
+    console.error('Assetlarni tekshirishda xatolik:', error);
+    return [];
+  }
+
+  if (data && data.length > 0) {
+    console.log(`✅ ${data.length} ta asset topildi:`, data);
+    return data;
+  } else {
+    console.log('❌ Assetlar topilmadi');
+    return [];
+  }
+}
+
+/**
+ * Holder assetlarini token ma'lumotlari bilan olish (to'liq)
+ * @param holderId - Holder UUID
+ * @returns Assets with token info
+ */
+export async function getHolderAssetsWithTokens(holderId: string): Promise<AssetWithToken[]> {
+  const { data, error } = await supabase
+    .from('assets')
+    .select(`
+      *,
+      token:token_whitelist!assets_token_symbol_fkey(
+        symbol,
+        name,
+        coingecko_id,
+        logo_url,
+        market_cap_rank
+      )
+    `)
+    .eq('holder_id', holderId)
+    .order('token_symbol', { ascending: true });
+
+  if (error) {
+    console.error('Assetlarni token bilan olishda xatolik:', error);
+    return [];
+  }
+
+  console.log(`✅ ${data?.length || 0} ta asset token bilan topildi`);
+  return Array.isArray(data) ? data : [];
 }
