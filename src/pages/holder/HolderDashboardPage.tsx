@@ -29,7 +29,14 @@ export default function HolderDashboardPage() {
   }, [prices, assets]);
 
   const loadDashboardData = async () => {
-    if (!currentHolder) return;
+    if (!currentHolder) {
+      console.log('❌ currentHolder yo\'q');
+      return;
+    }
+
+    console.log('🔄 Dashboard ma\'lumotlari yuklanmoqda...');
+    console.log('📋 Holder ID:', currentHolder.id);
+    console.log('👤 Holder nomi:', currentHolder.name);
 
     setLoading(true);
     try {
@@ -38,10 +45,15 @@ export default function HolderDashboardPage() {
         getTransactionsByHolderId(currentHolder.id),
       ]);
 
+      console.log('📊 Assets data:', assetsData);
+      console.log('📜 Transactions data:', transactionsData);
+
       setAssets(assetsData);
       setRecentTransactions(transactionsData.slice(0, 5));
+      
+      console.log(`✅ Dashboard yuklandi: ${assetsData.length} ta asset, ${transactionsData.length} ta transaction`);
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      console.error('❌ Dashboard yuklashda xatolik:', error);
     } finally {
       setLoading(false);
     }
