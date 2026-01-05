@@ -9,13 +9,24 @@ interface AppState {
   tokens: TokenWhitelist[];
   prices: PriceCache;
   pricesLoading: boolean;
-  
-  // Current holder (for holder dashboard)
+
+  // Holder
   currentHolder: Holder | null;
-  
+
+  // Holder assets
+  assets: any[];
+
+  // Calculated portfolio values
+  totalValueUSDT: number;
+  totalValueKGS: number;
+
   // Actions
   loadTokens: () => Promise<void>;
   updatePrices: () => Promise<void>;
+
+  setAssets: (assets: any[]) => void;
+  calculatePortfolioValue: () => void;
+
   setCurrentHolder: (holder: Holder | null) => void;
   clearCurrentHolder: () => void;
 }
@@ -25,9 +36,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   tokens: [],
   prices: {},
   pricesLoading: false,
-  currentHolder: null,
 
-  // Load all tokens from database
+  currentHolder: null,
+  assets: [],
+
+  totalValueUSDT: 0,
+  totalValueKGS: 0,
+
+  // Load all tokens
   loadTokens: async () => {
     const tokens = await getAllTokens();
     set({ tokens });
@@ -36,21 +52,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Update prices from CoinGecko
   updatePrices: async () => {
     const { tokens, pricesLoading } = get();
-    
-    if (pricesLoading || tokens.length === 0) {
-      return;
-    }
+
+    if (pricesLoading || tokens.length === 0) return;
 
     set({ pricesLoading: true });
 
     try {
-      // Get all coingecko IDs
       const coingeckoIds = tokens.map(t => t.coingecko_id);
-      
-      // Fetch prices
       const priceData = await priceService.fetchPrices(coingeckoIds);
-      
-      // Map coingecko IDs back to symbols
+
       const prices: PriceCache = {};
       for (const token of tokens) {
         const priceInfo = priceData[token.coingecko_id];
@@ -63,16 +73,52 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
 
       set({ prices, pricesLoading: false });
+
+      // 🔥 MUHIM: narx yangilanganda qayta hisoblash
+      get().calculatePortfolioValue();
+
     } catch (error) {
       console.error('Error updating prices:', error);
       set({ pricesLoading: false });
     }
   },
 
-  // Set current holder for holder dashboard
-  setCurrentHolder: (holder: Holder | null) => {
+  // Set assets & auto-calc
+  setAssets: (assets) => {
+    set({ assets });
+    get().calculatePortfolioValue();
+  },
+
+  // Calculate portfolio value
+  calculatePortfolioValue: () => {
+    const { assets, prices } = get();
+
+    if (!assets.length || !Object.keys(prices).length) return;
+
+    let totalUSDT = 0;
+    let totalKGS = 0;
+
+    for (const asset of assets) {
+      const symbol = asset.token_symbol?.toLowerCase();
+      const price = prices[symbol];
+      if (!price) continue;
+
+      const amount = Number(asset.amount);
+      if (isNaN(amount)) continue;
+
+      totalUSDT += amount * price.price_usdt;
+      totalKGS += amount * price.price_kgs;
+    }
+
+    set({
+      totalValueUSDT: totalUSDT,
+      totalValueKGS: totalKGS,
+    });
+  },
+
+  // Holder
+  setCurrentHolder: (holder) => {
     set({ currentHolder: holder });
-    // Store in sessionStorage for persistence
     if (holder) {
       sessionStorage.setItem('lethex_holder', JSON.stringify(holder));
     } else {
@@ -80,21 +126,19 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  // Clear current holder (logout)
   clearCurrentHolder: () => {
-    set({ currentHolder: null });
+    set({ currentHolder: null, assets: [] });
     sessionStorage.removeItem('lethex_holder');
   },
 }));
 
-// Initialize holder from sessionStorage on app load
+// Restore holder from sessionStorage
 const storedHolder = sessionStorage.getItem('lethex_holder');
 if (storedHolder) {
   try {
     const holder = JSON.parse(storedHolder);
     useAppStore.setState({ currentHolder: holder });
-  } catch (error) {
-    console.error('Error parsing stored holder:', error);
+  } catch {
     sessionStorage.removeItem('lethex_holder');
   }
 }
