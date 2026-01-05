@@ -1,5 +1,6 @@
 // LETHEX Holder Dashboard Page
 import { useEffect, useState } from 'react';
+import { fixPortfolioSync } from '@/fixes/fixPortfolioSync';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Wallet, TrendingUp, Clock } from 'lucide-react';
