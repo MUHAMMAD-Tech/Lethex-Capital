@@ -1,80 +1,47 @@
-// LETHEX Holder Dashboard Page
-import { useEffect, useState } from 'react';
-import { fixPortfolioSync } from '@/fixes/fixPortfolioSync';
+// LETHEX Holder Dashboard Page (STORE-BASED, FIXED)
+
+import { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Wallet, TrendingUp, Clock } from 'lucide-react';
+
 import { useAppStore } from '@/store/appStore';
-import { getAssetsByHolderId, getTransactionsByHolderId } from '@/db/api';
-import type { AssetWithToken, TransactionWithDetails } from '@/types/types';
+import { fixPortfolioSync } from '@/fixes/fixPortfolioSync';
+import { getTransactionsByHolderId } from '@/db/api';
+import type { TransactionWithDetails } from '@/types/types';
+import { useState } from 'react';
 
 export default function HolderDashboardPage() {
-  const { currentHolder, prices } = useAppStore();
-  const [loading, setLoading] = useState(true);
-  const [assets, setAssets] = useState<AssetWithToken[]>([]);
-  const [recentTransactions, setRecentTransactions] = useState<TransactionWithDetails[]>([]);
-  const [totalValueUSDT, setTotalValueUSDT] = useState(0);
-  const [totalValueKGS, setTotalValueKGS] = useState(0);
+  const {
+    currentHolder,
+    assets,
+    totalValueUSDT,
+    totalValueKGS,
+  } = useAppStore();
 
+  const [loading, setLoading] = useState(true);
+  const [recentTransactions, setRecentTransactions] = useState<TransactionWithDetails[]>([]);
+
+  // 🔥 Holder o‘zgarsa → store majburan sync
   useEffect(() => {
     if (currentHolder) {
-      loadDashboardData();
+      fixPortfolioSync();
+      loadTransactions();
     }
   }, [currentHolder]);
 
-  useEffect(() => {
-    // Recalculate portfolio value when prices update
-    if (assets.length > 0 && Object.keys(prices).length > 0) {
-      calculatePortfolioValue();
-    }
-  }, [prices, assets]);
-
-  const loadDashboardData = async () => {
-    if (!currentHolder) {
-      console.log('❌ currentHolder yo\'q');
-      return;
-    }
-
-    console.log('🔄 Dashboard ma\'lumotlari yuklanmoqda...');
-    console.log('📋 Holder ID:', currentHolder.id);
-    console.log('👤 Holder nomi:', currentHolder.name);
+  const loadTransactions = async () => {
+    if (!currentHolder) return;
 
     setLoading(true);
     try {
-      const [assetsData, transactionsData] = await Promise.all([
-        getAssetsByHolderId(currentHolder.id),
-        getTransactionsByHolderId(currentHolder.id),
-      ]);
-
-      console.log('📊 Assets data:', assetsData);
-      console.log('📜 Transactions data:', transactionsData);
-
-      setAssets(assetsData);
-      setRecentTransactions(transactionsData.slice(0, 5));
-      
-      console.log(`✅ Dashboard yuklandi: ${assetsData.length} ta asset, ${transactionsData.length} ta transaction`);
-    } catch (error) {
-      console.error('❌ Dashboard yuklashda xatolik:', error);
+      const txs = await getTransactionsByHolderId(currentHolder.id);
+      setRecentTransactions(txs.slice(0, 5));
+    } catch (e) {
+      console.error('❌ Transactions load error:', e);
     } finally {
       setLoading(false);
     }
-  };
-
-  const calculatePortfolioValue = () => {
-    let totalUSDT = 0;
-    let totalKGS = 0;
-
-    for (const asset of assets) {
-      const price = prices[asset.token_symbol.toLowerCase()];
-      if (price) {
-        const amount = parseFloat(asset.amount);
-        totalUSDT += amount * price.price_usdt;
-        totalKGS += amount * price.price_kgs;
-      }
-    }
-
-    setTotalValueUSDT(totalUSDT);
-    setTotalValueKGS(totalKGS);
   };
 
   const stats = [
@@ -86,13 +53,19 @@ export default function HolderDashboardPage() {
     },
     {
       title: 'Portfolio Value (USDT)',
-      value: `$${totalValueUSDT.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      value: `$${totalValueUSDT.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`,
       icon: TrendingUp,
       color: 'text-success',
     },
     {
       title: 'Portfolio Value (KGS)',
-      value: `${totalValueKGS.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} KGS`,
+      value: `${totalValueKGS.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })} KGS`,
       icon: TrendingUp,
       color: 'text-success',
     },
@@ -116,10 +89,10 @@ export default function HolderDashboardPage() {
         </p>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats */}
       <div className="grid grid-cols-1 @md:grid-cols-2 xl:grid-cols-4 gap-4 xl:gap-6">
-        {stats.map((stat) => (
-          <Card key={stat.title} className="border-border bg-card card-glow-hover">
+        {stats.map(stat => (
+          <Card key={stat.title} className="border-border bg-card">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {stat.title}
@@ -151,24 +124,32 @@ export default function HolderDashboardPage() {
               className="p-4 rounded-lg bg-secondary/50 hover:bg-accent transition-colors text-center"
             >
               <Wallet className="h-8 w-8 mx-auto mb-2 text-primary" />
-              <p className="font-semibold text-foreground">View Portfolio</p>
-              <p className="text-sm text-muted-foreground mt-1">See all your assets</p>
+              <p className="font-semibold">View Portfolio</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                See all your assets
+              </p>
             </a>
+
             <a
               href="/holder/transactions"
               className="p-4 rounded-lg bg-secondary/50 hover:bg-accent transition-colors text-center"
             >
               <TrendingUp className="h-8 w-8 mx-auto mb-2 text-primary" />
-              <p className="font-semibold text-foreground">New Transaction</p>
-              <p className="text-sm text-muted-foreground mt-1">Swap, buy, or sell</p>
+              <p className="font-semibold">New Transaction</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Swap, buy, or sell
+              </p>
             </a>
+
             <a
               href="/holder/history"
               className="p-4 rounded-lg bg-secondary/50 hover:bg-accent transition-colors text-center"
             >
               <Clock className="h-8 w-8 mx-auto mb-2 text-primary" />
-              <p className="font-semibold text-foreground">View History</p>
-              <p className="text-sm text-muted-foreground mt-1">Transaction history</p>
+              <p className="font-semibold">View History</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Transaction history
+              </p>
             </a>
           </div>
         </CardContent>
